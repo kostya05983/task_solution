@@ -2,50 +2,166 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
+using NUnit.Framework;
 
 namespace ConsoleApp1
 {
+    
+    
+//    [TestFixture]
     class Program
     {
-        static void Main(string[] args)
+
+        [Test]
+        public void ShouldShowTrace()
         {
-            var interpreator = new Interpretator();
-            interpreator.Interpretate("def test\n" +
-                                      "    set a 5\n" +
-                                      "    sub a 3\n" +
-                                      "    print b\n" +
-                                      "set b 7\n" +
-                                      "call test");
+            var _interpreter = new Interpretator();
+
+            _interpreter.Interpretate("set code");
+            _interpreter.Interpretate("def test\n" +
+                                     "    set a 4\n" +
+                                     "set t 5\n" +
+                                     "call test\n" +
+                                     "sub a 3\n" +
+                                     "call test\n" +
+                                     "print a");
+            _interpreter.Interpretate("end set code");
+            _interpreter.Interpretate("add break 1");
+            _interpreter.Interpretate("run");
+            _interpreter.Interpretate("print trace");
+            _interpreter.Interpretate("run");
+            _interpreter.Interpretate("run");
+        }
+    }
+
+    class Variable
+    {
+        public int Value;
+        public int LastChanged;
+
+        public Variable(int value, int lastChanged)
+        {
+            Value = value;
+            this.LastChanged = lastChanged;
+        }
+    }
+
+    class Trace
+    {
+        public string Name;
+        public int Line;
+
+        public Trace(string name, int line)
+        {
+            this.Name = name;
+            this.Line = line;
+        }
+    }
+
+    class Frame
+    {
+        public string Name;
+        public int CalledLine;
+        public Dictionary<int, IOperation> Operations;
+
+        public Frame(string name, Dictionary<int, IOperation> operations, int calledLine)
+        {
+            Name = name;
+            Operations = operations;
+            CalledLine = calledLine;
         }
     }
 
     class Interpretator
     {
-        private Dictionary<String, Dictionary<int, IOperation>> _program =
-            new Dictionary<string, Dictionary<int, IOperation>>();
+        private Dictionary<String, Frame> _program =
+            new Dictionary<string, Frame>();
 
-        private Stack<Dictionary<int, IOperation>> _runtime = new Stack<Dictionary<int, IOperation>>();
+        private Stack<Frame> _runtime = new Stack<Frame>();
 
-        private Dictionary<string, Int32> memory = new Dictionary<string, Int32>();
-        private Stack<String> funkStack = new Stack<string>();
+        private Dictionary<string, Variable> memory = new Dictionary<string, Variable>();
+        private Stack<Trace> funkStack = new Stack<Trace>();
         private List<int> breakPointLines = new List<int>();
+        private int currentLine = 0;
+        private Dictionary<string, int> framePosition = new Dictionary<string, int>();
+
+        public Interpretator()
+        {
+            _program.Add("main", new Frame("main", new Dictionary<int, IOperation>(), 0));
+        }
 
         public void Interpretate(string text)
         {
-            _program.Add("main", new Dictionary<int, IOperation>());
-            var lines = text.Split("\n");
+            switch (text)
+            {
+                case "set code":
+                {
+                    break;
+                }
+                case "end set code":
+                {
+                    break;
+                }
+                case "run":
+                {
+                    RunProgram();
+                    break;
+                }
+                case "print mem":
+                {
+                    PrintMem();
+                    break;
+                }
+                case "print trace":
+                {
+                    PrintTrace();
+                    break;
+                }
+                case "step":
+                {
+                    var frame = _runtime.Peek();
+                    var op = frame.Operations[currentLine];
+                    op.Call(memory, currentLine);
+                    currentLine++;
+                    break;
+                }
+                case "step over":
+                {
+                    var frame = _runtime.Peek();
+                    var op = frame.Operations[currentLine];
+                    if (op is CallOperator)
+                    {
+                        var newFrame = _runtime.Peek();
+                        RunFrame(newFrame, true);
+                        _runtime.Pop();
+                    }
 
-            var currentKey = "main";
+                    currentLine++;
+                    break;
+                }
+                default:
+                {
+                    ParseProgram(text);
+                    break;
+                }
+            }
+        }
+
+        private void ParseProgram(string text)
+        {
+            var lines = text.Split("\n");
             var currentLine = 0;
+            var currentKey = "main";
             foreach (var line in lines)
             {
                 var trimmed = line.Trim();
                 var operatorName = trimmed.Substring(0, trimmed.IndexOf(" ", StringComparison.Ordinal));
                 if (!line.StartsWith("    ") && funkStack.Count > 0)
                 {
-                    currentKey = funkStack.Pop();
+                    currentKey = funkStack.Pop().Name;
                 }
 
                 var cutted = CutString(trimmed);
@@ -53,52 +169,65 @@ namespace ConsoleApp1
                 switch (operatorName)
                 {
                     case "def":
-                        funkStack.Push(currentKey);
+                        funkStack.Push(new Trace(currentKey, currentLine));
                         currentKey = cutted;
 
-                        _program.Add(cutted, new Dictionary<int, IOperation>());
+                        _program.Add(cutted, new Frame(cutted, new Dictionary<int, IOperation>(), currentLine));
                         break;
                     case "set":
                     {
-                        _program[currentKey][currentLine] = new SetOperator(cutted);
+                        _program[currentKey].Operations[currentLine] = new SetOperator(cutted);
                         break;
                     }
                     case "sub":
                     {
-                        _program[currentKey][currentLine] = new SubOperator(cutted);
+                        _program[currentKey].Operations[currentLine] = new SubOperator(cutted);
                         break;
                     }
                     case "rem":
                     {
-                        _program[currentKey][currentLine] = new RemOperator(cutted);
+                        _program[currentKey].Operations[currentLine] = new RemOperator(cutted);
                         break;
                     }
                     case "print":
                     {
-                        _program[currentKey][currentLine] = new PrintOperator(cutted);
+                        _program[currentKey].Operations[currentLine] = new PrintOperator(cutted);
                         break;
                     }
                     case "call":
                     {
-                        _program[currentKey][currentLine] = new CallOperator(cutted, _program, currentLine);
+                        _program[currentKey].Operations[currentLine] = new CallOperator(cutted, _program, _runtime);
                         break;
                     }
                     case "add":
                     {
-                        var breakpointLine = int.Parse(cutted);
+                        var breakpointLine = int.Parse(CutString(cutted));
                         breakPointLines.Add(breakpointLine);
                         break;
                     }
-                    case "run":
-                    {
-                        RunProgram(currentLine);
-                        break;
-                    }
                 }
+
+                currentLine++;
             }
         }
 
-        private void RunProgram(int currentLine)
+        private void PrintMem()
+        {
+            foreach (var entry in memory)
+            {
+                Console.WriteLine(entry.Key + " " + entry.Value.Value + " " + entry.Value.LastChanged);
+            }
+        }
+
+        private void PrintTrace()
+        {
+            foreach (var trace in _runtime.Where(trace => trace.Name != "main"))
+            {
+                Console.WriteLine(trace.CalledLine + " " + trace.Name);
+            }
+        }
+
+        private void RunProgram()
         {
             if (_runtime.Count == 0)
             {
@@ -108,21 +237,47 @@ namespace ConsoleApp1
 
             while (_runtime.Count > 0)
             {
-                if (breakPointLines.Contains(currentLine))
-                {
-                    return;
-                }
-
                 var frame = _runtime.Peek();
-                if (!frame.ContainsKey(currentLine))
+                Console.WriteLine("current frame", frame.Name);
+                var result = RunFrame(frame, false);
+                if (result == 0)
                 {
                     _runtime.Pop();
-                    continue;
+                }
+            }
+        }
+
+        private int RunFrame(Frame frame, bool isIgnoreBreak)
+        {
+            int currentFrameLine;
+            if (!framePosition.ContainsKey(frame.Name))
+            {
+                currentFrameLine = frame.Operations.Keys.Min();
+                framePosition[frame.Name] = currentFrameLine;
+            }
+            else
+            {
+                currentFrameLine = framePosition[frame.Name];
+            }
+
+            while (frame.Operations.ContainsKey(currentFrameLine))
+            {
+                if (breakPointLines.Contains(currentFrameLine) && !isIgnoreBreak)
+                {
+                    return 1;
                 }
 
-                frame[currentLine].Call(memory);
-                currentLine++;
+                var op = frame.Operations[currentFrameLine];
+                op.Call(memory, currentFrameLine);
+                currentFrameLine++;
+                framePosition[frame.Name] = currentFrameLine;
+                if (op is CallOperator)
+                {
+                    return 1;
+                }
             }
+
+            return 0;
         }
 
         private string CutString(string line)
@@ -133,7 +288,7 @@ namespace ConsoleApp1
 
     interface IOperation
     {
-        void Call(Dictionary<String, Int32> memory);
+        void Call(Dictionary<string, Variable> memory, int currentLine);
     }
 
     class SetOperator : IOperation
@@ -147,9 +302,9 @@ namespace ConsoleApp1
             _val = Int32.Parse(init.Substring(init.IndexOf(" ", StringComparison.Ordinal) + 1));
         }
 
-        public void Call(Dictionary<String, Int32> memory)
+        public void Call(Dictionary<string, Variable> memory, int currentLine)
         {
-            memory[_name] = _val;
+            memory[_name] = new Variable(_val, currentLine);
         }
     }
 
@@ -165,9 +320,10 @@ namespace ConsoleApp1
         }
 
 
-        public void Call(Dictionary<String, Int32> memory)
+        public void Call(Dictionary<String, Variable> memory, int currentLine)
         {
-            memory[_name] -= _val;
+            memory[_name] = new Variable(
+                memory[_name].Value - _val, currentLine);
         }
     }
 
@@ -182,7 +338,7 @@ namespace ConsoleApp1
             _val = Int32.Parse(init.Substring(init.IndexOf(" ", StringComparison.Ordinal) + 1));
         }
 
-        public void Call(Dictionary<String, Int32> memory)
+        public void Call(Dictionary<String, Variable> memory, int currentLine)
         {
             memory.Remove(_name);
         }
@@ -191,24 +347,21 @@ namespace ConsoleApp1
     class CallOperator : IOperation
     {
         private string _name;
-        private int _currentLine;
-        private Dictionary<String, Dictionary<int, IOperation>> _dictionary;
+        private Dictionary<String, Frame> _program;
+        private Stack<Frame> _runtime;
 
-        public CallOperator(string init, Dictionary<String, Dictionary<int, IOperation>> dictionary, int currentLine)
+        public CallOperator(string init, Dictionary<String, Frame> program,
+            Stack<Frame> _runtime)
         {
-            this._currentLine = currentLine;
             this._name = init;
-            this._dictionary = dictionary;
+            this._program = program;
+            this._runtime = _runtime;
         }
 
-        public void Call(Dictionary<string, int> memory)
+        public void Call(Dictionary<string, Variable> memory, int currentLine)
         {
-            var queue = _dictionary[_name];
-            while (queue.Count > 0)
-            {
-                queue[_currentLine].Call(memory);
-                _currentLine++;
-            }
+            var queue = _program[_name];
+            _runtime.Push(queue);
         }
     }
 
@@ -221,10 +374,10 @@ namespace ConsoleApp1
             _name = init;
         }
 
-        public void Call(Dictionary<String, Int32> memory)
+        public void Call(Dictionary<String, Variable> memory, int currentLine)
         {
             var val = memory[_name];
-            Console.WriteLine(val);
+            Console.WriteLine(val.Value);
         }
     }
 }
