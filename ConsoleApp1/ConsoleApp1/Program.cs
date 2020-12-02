@@ -23,16 +23,22 @@ namespace ConsoleApp1
 
     class Interpretator
     {
-        private Dictionary<String, Queue<IOperation>> _program = new Dictionary<string, Queue<IOperation>>();
+        private Dictionary<String, Dictionary<int, IOperation>> _program =
+            new Dictionary<string, Dictionary<int, IOperation>>();
+
+        private Stack<Dictionary<int, IOperation>> _runtime = new Stack<Dictionary<int, IOperation>>();
+
         private Dictionary<string, Int32> memory = new Dictionary<string, Int32>();
         private Stack<String> funkStack = new Stack<string>();
+        private List<int> breakPointLines = new List<int>();
 
         public void Interpretate(string text)
         {
-            _program.Add("main", new Queue<IOperation>());
+            _program.Add("main", new Dictionary<int, IOperation>());
             var lines = text.Split("\n");
 
             var currentKey = "main";
+            var currentLine = 0;
             foreach (var line in lines)
             {
                 var trimmed = line.Trim();
@@ -42,53 +48,80 @@ namespace ConsoleApp1
                     currentKey = funkStack.Pop();
                 }
 
+                var cutted = CutString(trimmed);
+
                 switch (operatorName)
                 {
                     case "def":
-                        var name = CutString(trimmed);
                         funkStack.Push(currentKey);
-                        currentKey = name;
+                        currentKey = cutted;
 
-                        _program.Add(name, new Queue<IOperation>());
+                        _program.Add(cutted, new Dictionary<int, IOperation>());
                         break;
                     case "set":
                     {
-                        var cutted = CutString(trimmed);
-                        _program[currentKey].Enqueue(new SetOperator(cutted));
+                        _program[currentKey][currentLine] = new SetOperator(cutted);
                         break;
                     }
                     case "sub":
                     {
-                        var cutted = CutString(trimmed);
-                        _program[currentKey].Enqueue(new SubOperator(cutted));
+                        _program[currentKey][currentLine] = new SubOperator(cutted);
                         break;
                     }
                     case "rem":
                     {
-                        var cutted = CutString(trimmed);
-                        _program[currentKey].Enqueue(new RemOperator(cutted));
+                        _program[currentKey][currentLine] = new RemOperator(cutted);
                         break;
                     }
                     case "print":
                     {
-                        var cutted = CutString(trimmed);
-                        _program[currentKey].Enqueue(new PrintOperator(cutted));
+                        _program[currentKey][currentLine] = new PrintOperator(cutted);
                         break;
                     }
                     case "call":
                     {
-                        var cutted = CutString(trimmed);
-                        _program[currentKey].Enqueue(new CallOperator(cutted, _program));
+                        _program[currentKey][currentLine] = new CallOperator(cutted, _program, currentLine);
+                        break;
+                    }
+                    case "add":
+                    {
+                        var breakpointLine = int.Parse(cutted);
+                        breakPointLines.Add(breakpointLine);
+                        break;
+                    }
+                    case "run":
+                    {
+                        RunProgram(currentLine);
                         break;
                     }
                 }
             }
+        }
 
-            var queue = _program["main"];
-            while (queue.Count > 0)
+        private void RunProgram(int currentLine)
+        {
+            if (_runtime.Count == 0)
             {
-                var op = queue.Dequeue();
-                op.Call(memory);
+                var queue = _program["main"];
+                _runtime.Push(queue);
+            }
+
+            while (_runtime.Count > 0)
+            {
+                if (breakPointLines.Contains(currentLine))
+                {
+                    return;
+                }
+
+                var frame = _runtime.Peek();
+                if (!frame.ContainsKey(currentLine))
+                {
+                    _runtime.Pop();
+                    continue;
+                }
+
+                frame[currentLine].Call(memory);
+                currentLine++;
             }
         }
 
@@ -131,6 +164,7 @@ namespace ConsoleApp1
             _val = Int32.Parse(init.Substring(init.IndexOf(" ", StringComparison.Ordinal) + 1));
         }
 
+
         public void Call(Dictionary<String, Int32> memory)
         {
             memory[_name] -= _val;
@@ -157,10 +191,12 @@ namespace ConsoleApp1
     class CallOperator : IOperation
     {
         private string _name;
-        private Dictionary<String, Queue<IOperation>> _dictionary;
+        private int _currentLine;
+        private Dictionary<String, Dictionary<int, IOperation>> _dictionary;
 
-        public CallOperator(string init, Dictionary<String, Queue<IOperation>> dictionary)
+        public CallOperator(string init, Dictionary<String, Dictionary<int, IOperation>> dictionary, int currentLine)
         {
+            this._currentLine = currentLine;
             this._name = init;
             this._dictionary = dictionary;
         }
@@ -170,8 +206,8 @@ namespace ConsoleApp1
             var queue = _dictionary[_name];
             while (queue.Count > 0)
             {
-                var op = queue.Dequeue();
-                op.Call(memory);
+                queue[_currentLine].Call(memory);
+                _currentLine++;
             }
         }
     }

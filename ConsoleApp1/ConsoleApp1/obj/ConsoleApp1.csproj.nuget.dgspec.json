@@ -1,23 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\kosty\\Projects\\task_solution\\ConsoleApp1\\ConsoleApp1\\ConsoleApp1.csproj": {}
+    "/home/kostya05983/Projects/task_solution/ConsoleApp1/ConsoleApp1/ConsoleApp1.csproj": {}
   },
   "projects": {
-    "C:\\Users\\kosty\\Projects\\task_solution\\ConsoleApp1\\ConsoleApp1\\ConsoleApp1.csproj": {
+    "/home/kostya05983/Projects/task_solution/ConsoleApp1/ConsoleApp1/ConsoleApp1.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\kosty\\Projects\\task_solution\\ConsoleApp1\\ConsoleApp1\\ConsoleApp1.csproj",
+        "projectUniqueName": "/home/kostya05983/Projects/task_solution/ConsoleApp1/ConsoleApp1/ConsoleApp1.csproj",
         "projectName": "ConsoleApp1",
-        "projectPath": "C:\\Users\\kosty\\Projects\\task_solution\\ConsoleApp1\\ConsoleApp1\\ConsoleApp1.csproj",
-        "packagesPath": "C:\\Users\\kosty\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\kosty\\Projects\\task_solution\\ConsoleApp1\\ConsoleApp1\\obj\\",
+        "projectPath": "/home/kostya05983/Projects/task_solution/ConsoleApp1/ConsoleApp1/ConsoleApp1.csproj",
+        "packagesPath": "/home/kostya05983/.nuget/packages/",
+        "outputPath": "/home/kostya05983/Projects/task_solution/ConsoleApp1/ConsoleApp1/obj/",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
-          "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
+          "/usr/share/dotnet/sdk/NuGetFallbackFolder"
         ],
         "configFilePaths": [
-          "C:\\Users\\kosty\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "/home/kostya05983/.config/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "netcoreapp3.1"
