@@ -9,25 +9,20 @@ using NUnit.Framework;
 
 namespace ConsoleApp1
 {
-    
-    
-//    [TestFixture]
     class Program
     {
-
-        [Test]
-        public void ShouldShowTrace()
+        static void Main(string[] args)
         {
             var _interpreter = new Interpretator();
 
             _interpreter.Interpretate("set code");
             _interpreter.Interpretate("def test\n" +
-                                     "    set a 4\n" +
-                                     "set t 5\n" +
-                                     "call test\n" +
-                                     "sub a 3\n" +
-                                     "call test\n" +
-                                     "print a");
+                                      "    set a 4\n" +
+                                      "set t 5\n" +
+                                      "call test\n" +
+                                      "sub a 3\n" +
+                                      "call test\n" +
+                                      "print a");
             _interpreter.Interpretate("end set code");
             _interpreter.Interpretate("add break 1");
             _interpreter.Interpretate("run");
@@ -77,16 +72,12 @@ namespace ConsoleApp1
 
     class Interpretator
     {
-        private Dictionary<String, Frame> _program =
-            new Dictionary<string, Frame>();
-
+        private Dictionary<String, Frame> _program = new Dictionary<string, Frame>();
         private Stack<Frame> _runtime = new Stack<Frame>();
-
         private Dictionary<string, Variable> memory = new Dictionary<string, Variable>();
-        private Stack<Trace> funkStack = new Stack<Trace>();
         private List<int> breakPointLines = new List<int>();
-        private int currentLine = 0;
         private Dictionary<string, int> framePosition = new Dictionary<string, int>();
+        private int? lastBreakLine;
 
         public Interpretator()
         {
@@ -123,14 +114,18 @@ namespace ConsoleApp1
                 case "step":
                 {
                     var frame = _runtime.Peek();
+                    var currentLine = framePosition[frame.Name];
                     var op = frame.Operations[currentLine];
                     op.Call(memory, currentLine);
+
                     currentLine++;
+                    framePosition[frame.Name] = currentLine;
                     break;
                 }
                 case "step over":
                 {
                     var frame = _runtime.Peek();
+                    var currentLine = framePosition[frame.Name];
                     var op = frame.Operations[currentLine];
                     if (op is CallOperator)
                     {
@@ -140,6 +135,7 @@ namespace ConsoleApp1
                     }
 
                     currentLine++;
+                    framePosition[frame.Name] = currentLine;
                     break;
                 }
                 default:
@@ -155,13 +151,14 @@ namespace ConsoleApp1
             var lines = text.Split("\n");
             var currentLine = 0;
             var currentKey = "main";
+            var funkStack = new Stack<String>();
             foreach (var line in lines)
             {
                 var trimmed = line.Trim();
                 var operatorName = trimmed.Substring(0, trimmed.IndexOf(" ", StringComparison.Ordinal));
                 if (!line.StartsWith("    ") && funkStack.Count > 0)
                 {
-                    currentKey = funkStack.Pop().Name;
+                    currentKey = funkStack.Pop();
                 }
 
                 var cutted = CutString(trimmed);
@@ -169,7 +166,7 @@ namespace ConsoleApp1
                 switch (operatorName)
                 {
                     case "def":
-                        funkStack.Push(new Trace(currentKey, currentLine));
+                        funkStack.Push(currentKey);
                         currentKey = cutted;
 
                         _program.Add(cutted, new Frame(cutted, new Dictionary<int, IOperation>(), currentLine));
@@ -238,11 +235,14 @@ namespace ConsoleApp1
             while (_runtime.Count > 0)
             {
                 var frame = _runtime.Peek();
-                Console.WriteLine("current frame", frame.Name);
                 var result = RunFrame(frame, false);
-                if (result == 0)
+                switch (result)
                 {
-                    _runtime.Pop();
+                    case 0:
+                        _runtime.Pop();
+                        break;
+                    case -1:
+                        return;
                 }
             }
         }
@@ -262,9 +262,14 @@ namespace ConsoleApp1
 
             while (frame.Operations.ContainsKey(currentFrameLine))
             {
-                if (breakPointLines.Contains(currentFrameLine) && !isIgnoreBreak)
+                if (breakPointLines.Contains(currentFrameLine) && !isIgnoreBreak && currentFrameLine != lastBreakLine)
                 {
-                    return 1;
+                    lastBreakLine = currentFrameLine;
+                    return -1;
+                }
+                else
+                {
+                    lastBreakLine = null;
                 }
 
                 var op = frame.Operations[currentFrameLine];
@@ -350,8 +355,11 @@ namespace ConsoleApp1
         private Dictionary<String, Frame> _program;
         private Stack<Frame> _runtime;
 
-        public CallOperator(string init, Dictionary<String, Frame> program,
-            Stack<Frame> _runtime)
+        public CallOperator(
+            string init,
+            Dictionary<String, Frame> program,
+            Stack<Frame> _runtime
+        )
         {
             this._name = init;
             this._program = program;
@@ -360,8 +368,8 @@ namespace ConsoleApp1
 
         public void Call(Dictionary<string, Variable> memory, int currentLine)
         {
-            var queue = _program[_name];
-            _runtime.Push(queue);
+            var frame = _program[_name];
+            _runtime.Push(new Frame(frame.Name, frame.Operations, currentLine));
         }
     }
 

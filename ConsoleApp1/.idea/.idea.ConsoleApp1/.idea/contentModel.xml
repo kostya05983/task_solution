@@ -3,9 +3,6 @@
   <component name="ContentModelStore">
     <e p="$USER_HOME$/.Rider2019.2/system/extResources" t="IncludeRecursive" />
     <e p="$USER_HOME$/.Rider2019.2/system/resharper-host/local/Transient/ReSharperHost/v192/SolutionCaches/_ConsoleApp1.-1886300586.00" t="ExcludeRecursive" />
-    <e p="$USER_HOME$/.nuget/packages/microsoft.net.test.sdk/16.8.0/build/netcoreapp2.1" t="Include">
-      <e p="Microsoft.NET.Test.Sdk.Program.cs" t="Include" />
-    </e>
     <e p="$USER_HOME$/.nuget/packages/nunit3testadapter/3.17.0/build/netcoreapp2.1/NUnit3.TestAdapter.dll" t="Include" />
     <e p="$USER_HOME$/.nuget/packages/nunit3testadapter/3.17.0/build/netcoreapp2.1/NUnit3.TestAdapter.pdb" t="Include" />
     <e p="$USER_HOME$/.nuget/packages/nunit3testadapter/3.17.0/build/netcoreapp2.1/nunit.engine.api.dll" t="Include" />
