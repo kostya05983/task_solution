@@ -44,18 +44,6 @@ namespace ConsoleApp1
         }
     }
 
-    class Trace
-    {
-        public string Name;
-        public int Line;
-
-        public Trace(string name, int line)
-        {
-            this.Name = name;
-            this.Line = line;
-        }
-    }
-
     class Frame
     {
         public string Name;
@@ -267,11 +255,8 @@ namespace ConsoleApp1
                     lastBreakLine = currentFrameLine;
                     return -1;
                 }
-                else
-                {
-                    lastBreakLine = null;
-                }
-
+                
+                lastBreakLine = null;
                 var op = frame.Operations[currentFrameLine];
                 op.Call(memory, currentFrameLine);
                 currentFrameLine++;

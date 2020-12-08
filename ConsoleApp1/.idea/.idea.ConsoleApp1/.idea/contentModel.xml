@@ -1,18 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ContentModelStore">
-    <e p="$USER_HOME$/.Rider2019.2/system/extResources" t="IncludeRecursive" />
-    <e p="$USER_HOME$/.Rider2019.2/system/resharper-host/local/Transient/ReSharperHost/v192/SolutionCaches/_ConsoleApp1.-1886300586.00" t="ExcludeRecursive" />
-    <e p="$USER_HOME$/.nuget/packages/nunit3testadapter/3.17.0/build/netcoreapp2.1/NUnit3.TestAdapter.dll" t="Include" />
-    <e p="$USER_HOME$/.nuget/packages/nunit3testadapter/3.17.0/build/netcoreapp2.1/NUnit3.TestAdapter.pdb" t="Include" />
-    <e p="$USER_HOME$/.nuget/packages/nunit3testadapter/3.17.0/build/netcoreapp2.1/nunit.engine.api.dll" t="Include" />
-    <e p="$USER_HOME$/.nuget/packages/nunit3testadapter/3.17.0/build/netcoreapp2.1/nunit.engine.core.dll" t="Include" />
-    <e p="$USER_HOME$/.nuget/packages/nunit3testadapter/3.17.0/build/netcoreapp2.1/nunit.engine.dll" t="Include" />
-    <e p="$PROJECT_DIR$" t="IncludeFlat">
+    <e p="C:\Users\kosty\.nuget\packages\microsoft.testplatform.testhost\16.8.0\build\netcoreapp2.1\x64\testhost.dll" t="Include" />
+    <e p="C:\Users\kosty\.nuget\packages\microsoft.testplatform.testhost\16.8.0\build\netcoreapp2.1\x64\testhost.exe" t="Include" />
+    <e p="C:\Users\kosty\.nuget\packages\nunit3testadapter\3.17.0\build\netcoreapp2.1\nunit.engine.api.dll" t="Include" />
+    <e p="C:\Users\kosty\.nuget\packages\nunit3testadapter\3.17.0\build\netcoreapp2.1\nunit.engine.core.dll" t="Include" />
+    <e p="C:\Users\kosty\.nuget\packages\nunit3testadapter\3.17.0\build\netcoreapp2.1\nunit.engine.dll" t="Include" />
+    <e p="C:\Users\kosty\.nuget\packages\nunit3testadapter\3.17.0\build\netcoreapp2.1\NUnit3.TestAdapter.dll" t="Include" />
+    <e p="C:\Users\kosty\.nuget\packages\nunit3testadapter\3.17.0\build\netcoreapp2.1\NUnit3.TestAdapter.pdb" t="Include" />
+    <e p="C:\Users\kosty\.Rider2019.2\config\scratches" t="IncludeRecursive" />
+    <e p="C:\Users\kosty\.Rider2019.2\system\extResources" t="IncludeRecursive" />
+    <e p="C:\Users\kosty\.Rider2019.2\system\resharper-host\local\Transient\ReSharperHost\v192\SolutionCaches\_ConsoleApp1.-1715321060.00" t="ExcludeRecursive" />
+    <e p="C:\Users\kosty\Projects\task_solution\ConsoleApp1" t="IncludeFlat">
       <e p="ConsoleApp1" t="IncludeRecursive">
-        <e p="ConsoleApp1.csproj" t="IncludeRecursive" />
-        <e p="Program.cs" t="Include" />
         <e p="bin" t="ExcludeRecursive" />
+        <e p="ConsoleApp1.csproj" t="IncludeRecursive" />
         <e p="obj" t="ExcludeRecursive">
           <e p="Debug" t="Include">
             <e p="netcoreapp3.1" t="Include">
@@ -20,6 +22,7 @@
             </e>
           </e>
         </e>
+        <e p="Program.cs" t="Include" />
       </e>
       <e p="ConsoleApp1.sln" t="IncludeFlat" />
       <e p="packages" t="ExcludeRecursive" />
