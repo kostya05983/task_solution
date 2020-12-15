@@ -63,6 +63,19 @@ namespace ConsoleApp1
             CurrentRuntimeLine = Operations.Count != 0 ? Operations.Keys.Min() : 0;
         }
 
+        public bool ExecuteFrameLine(Dictionary<string, Variable> memory)
+        {
+            var op = Operations[CurrentRuntimeLine];
+            op.Call(memory, CurrentRuntimeLine);
+            CurrentRuntimeLine++;
+            return op is CallOperator;
+        }
+
+        public bool isOver()
+        {
+            return !Operations.ContainsKey(CurrentRuntimeLine);
+        }
+
         public void Reset()
         {
             CurrentRuntimeLine = Operations.Count != 0 ? Operations.Keys.Min() : 0;
@@ -112,28 +125,19 @@ namespace ConsoleApp1
                 case "step":
                 {
                     var frame = runtime.Peek();
-                    var currentLine = frame.CurrentRuntimeLine;
-                    var op = frame.Operations[currentLine];
-                    op.Call(memory, currentLine);
-
-                    currentLine++;
-                    frame.CurrentRuntimeLine = currentLine;
+                    frame.ExecuteFrameLine(memory);
                     break;
                 }
                 case "step over":
                 {
                     var frame = runtime.Peek();
-                    var currentLine = frame.CurrentRuntimeLine;
-                    var op = frame.Operations[currentLine];
-                    if (op is CallOperator)
+                    if (frame.ExecuteFrameLine(memory))
                     {
                         var newFrame = runtime.Peek();
                         RunFrame(newFrame, true);
                         runtime.Pop();
                     }
 
-                    currentLine++;
-                    frame.CurrentRuntimeLine = currentLine;
                     break;
                 }
                 default:
@@ -248,22 +252,17 @@ namespace ConsoleApp1
 
         private int RunFrame(Frame frame, bool isIgnoreBreak)
         {
-            int currentFrameLine = frame.CurrentRuntimeLine;
-
-            while (frame.Operations.ContainsKey(currentFrameLine))
+            while (!frame.isOver())
             {
-                if (breakPointLines.Contains(currentFrameLine) && !isIgnoreBreak && currentFrameLine != lastBreakLine)
+                if (breakPointLines.Contains(frame.CurrentRuntimeLine) && !isIgnoreBreak &&
+                    frame.CurrentRuntimeLine != lastBreakLine)
                 {
-                    lastBreakLine = currentFrameLine;
+                    lastBreakLine = frame.CurrentRuntimeLine;
                     return -1;
                 }
 
                 lastBreakLine = null;
-                var op = frame.Operations[currentFrameLine];
-                op.Call(memory, currentFrameLine);
-                currentFrameLine++;
-                frame.CurrentRuntimeLine = currentFrameLine;
-                if (op is CallOperator)
+                if (frame.ExecuteFrameLine(memory))
                 {
                     return 1;
                 }
