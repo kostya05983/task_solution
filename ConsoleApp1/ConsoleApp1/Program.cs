@@ -47,20 +47,25 @@ namespace ConsoleApp1
 
     class Frame
     {
-        public string Name
-        { get; }
+        public string Name { get; }
 
-        public int CalledLine
-        { get; }
+        public int CalledLine { get; }
 
-        public Dictionary<int, IOperation> Operations
-        { get; }
+        public Dictionary<int, IOperation> Operations { get; }
+
+        public int CurrentRuntimeLine { get; set; }
 
         public Frame(string name, Dictionary<int, IOperation> operations, int calledLine)
         {
             Name = name;
             Operations = operations;
             CalledLine = calledLine;
+            CurrentRuntimeLine = Operations.Count != 0 ? Operations.Keys.Min() : 0;
+        }
+
+        public void Reset()
+        {
+            CurrentRuntimeLine = Operations.Count != 0 ? Operations.Keys.Min() : 0;
         }
     }
 
@@ -70,7 +75,6 @@ namespace ConsoleApp1
         private Stack<Frame> runtime = new Stack<Frame>();
         private Dictionary<string, Variable> memory = new Dictionary<string, Variable>();
         private List<int> breakPointLines = new List<int>();
-        private Dictionary<string, int> framePosition = new Dictionary<string, int>();
         private int? lastBreakLine;
 
         public Interpretator()
@@ -108,18 +112,18 @@ namespace ConsoleApp1
                 case "step":
                 {
                     var frame = runtime.Peek();
-                    var currentLine = framePosition[frame.Name];
+                    var currentLine = frame.CurrentRuntimeLine;
                     var op = frame.Operations[currentLine];
                     op.Call(memory, currentLine);
 
                     currentLine++;
-                    framePosition[frame.Name] = currentLine;
+                    frame.CurrentRuntimeLine = currentLine;
                     break;
                 }
                 case "step over":
                 {
                     var frame = runtime.Peek();
-                    var currentLine = framePosition[frame.Name];
+                    var currentLine = frame.CurrentRuntimeLine;
                     var op = frame.Operations[currentLine];
                     if (op is CallOperator)
                     {
@@ -129,7 +133,7 @@ namespace ConsoleApp1
                     }
 
                     currentLine++;
-                    framePosition[frame.Name] = currentLine;
+                    frame.CurrentRuntimeLine = currentLine;
                     break;
                 }
                 default:
@@ -223,6 +227,7 @@ namespace ConsoleApp1
             if (runtime.Count == 0)
             {
                 var queue = program["main"];
+                queue.Reset();
                 runtime.Push(queue);
             }
 
@@ -243,16 +248,7 @@ namespace ConsoleApp1
 
         private int RunFrame(Frame frame, bool isIgnoreBreak)
         {
-            int currentFrameLine;
-            if (!framePosition.ContainsKey(frame.Name))
-            {
-                currentFrameLine = frame.Operations.Keys.Min();
-                framePosition[frame.Name] = currentFrameLine;
-            }
-            else
-            {
-                currentFrameLine = framePosition[frame.Name];
-            }
+            int currentFrameLine = frame.CurrentRuntimeLine;
 
             while (frame.Operations.ContainsKey(currentFrameLine))
             {
@@ -261,12 +257,12 @@ namespace ConsoleApp1
                     lastBreakLine = currentFrameLine;
                     return -1;
                 }
-                
+
                 lastBreakLine = null;
                 var op = frame.Operations[currentFrameLine];
                 op.Call(memory, currentFrameLine);
                 currentFrameLine++;
-                framePosition[frame.Name] = currentFrameLine;
+                frame.CurrentRuntimeLine = currentFrameLine;
                 if (op is CallOperator)
                 {
                     return 1;
