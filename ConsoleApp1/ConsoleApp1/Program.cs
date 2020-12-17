@@ -76,7 +76,7 @@ namespace ConsoleApp1
             return op is CallOperator;
         }
 
-        public bool isOver()
+        public bool IsOver()
         {
             return CurrentRuntimeOperator == null;
         }
@@ -271,7 +271,7 @@ namespace ConsoleApp1
 
         private int RunFrame(Frame frame, bool isIgnoreBreak)
         {
-            while (!frame.isOver())
+            while (!frame.IsOver())
             {
                 if (breakPointLines.Contains(frame.CurrentLine) && !isIgnoreBreak &&
                     frame.CurrentLine != lastBreakLine)
