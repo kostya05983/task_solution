@@ -98,10 +98,11 @@ namespace ConsoleApp1
         private const int NEW_CALL = 1;
         private const int INTERRUPT = -1;
         private const int OVER = 0;
+        private const string MAIN = "main";
 
         public Interpretator()
         {
-            program.Add("main", new Frame("main", new LinkedList<IOperation>(), 0));
+            program.Add(MAIN, new Frame(MAIN, new LinkedList<IOperation>(), 0));
         }
 
         public void Interpretate(string text)
@@ -139,23 +140,7 @@ namespace ConsoleApp1
                 }
                 case "step over":
                 {
-                    var frame = runtime.Peek();
-                    if (frame.ExecuteFrameLine(memory))
-                    {
-                        var newFrame = runtime.Peek();
-                        var i = 1;
-                        while (RunFrame(newFrame, true) == NEW_CALL)
-                        {
-                            i++;
-                        }
-
-                        while (i > 0)
-                        {
-                            runtime.Pop();
-                            i--;
-                        }
-                    }
-
+                    StepOver();
                     break;
                 }
                 default:
@@ -166,11 +151,31 @@ namespace ConsoleApp1
             }
         }
 
+        private void StepOver()
+        {
+            var frame = runtime.Peek();
+            if (!frame.ExecuteFrameLine(memory)) return;
+
+            var newFrame = runtime.Peek();
+            var previousCount = runtime.Count - 1;
+            while (runtime.Count != previousCount)
+            {
+                newFrame = runtime.Peek();
+                var result = RunFrame(newFrame, false);
+                switch (result)
+                {
+                    case OVER:
+                        runtime.Pop();
+                        break;
+                }
+            }
+        }
+
         private void ParseProgram(string text)
         {
             var lines = text.Split("\n");
             var currentLine = 0;
-            var currentFrame = "main";
+            var currentFrame = MAIN;
             var funkStack = new Stack<String>();
             foreach (var line in lines)
             {
@@ -239,7 +244,7 @@ namespace ConsoleApp1
 
         private void PrintTrace()
         {
-            foreach (var trace in runtime.Where(trace => trace.Name != "main"))
+            foreach (var trace in runtime.Where(trace => trace.Name != MAIN))
             {
                 Console.WriteLine(trace.CalledLine + " " + trace.Name);
             }
@@ -249,7 +254,7 @@ namespace ConsoleApp1
         {
             if (runtime.Count == 0)
             {
-                var queue = program["main"];
+                var queue = program[MAIN];
                 queue.Reset();
                 runtime.Push(queue);
             }
@@ -384,7 +389,8 @@ namespace ConsoleApp1
         public override void Call(Dictionary<string, Variable> memory)
         {
             var frame = program[name];
-            runtime.Push(new Frame(frame.Name, frame.Operations, ParsedLine));
+            frame.Reset();
+            runtime.Push(new Frame(name, frame.Operations, ParsedLine));
         }
     }
 
