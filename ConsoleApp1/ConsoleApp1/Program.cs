@@ -240,7 +240,7 @@ namespace ConsoleApp1
         }
     }
 
-    class Frame
+    class Function
     {
         public string Name { get; }
 
@@ -255,7 +255,7 @@ namespace ConsoleApp1
             get => CurrentRuntimeOperator.Value.ParsedLine;
         }
 
-        public Frame(string name, LinkedList<IOperation> operations, int calledLine)
+        public Function(string name, LinkedList<IOperation> operations, int calledLine)
         {
             Name = name;
             Operations = operations;
@@ -263,14 +263,18 @@ namespace ConsoleApp1
             CurrentRuntimeOperator = operations.First;
         }
 
-        public bool ExecuteFrameLine(Dictionary<string, Variable> memory)
+        /**
+         * set a 5
+         * sub a 3
+         */
+        public bool ExecuteFunctionLine(Dictionary<string, Variable> memory)
         {
             var op = CurrentRuntimeOperator.Value;
             op.Call(memory);
             CurrentRuntimeOperator = CurrentRuntimeOperator.Next;
             return op is CallOperator;
         }
-
+        
         public bool IsOver()
         {
             return CurrentRuntimeOperator == null;
@@ -284,8 +288,8 @@ namespace ConsoleApp1
 
     class Interpretator
     {
-        private Dictionary<String, Frame> program = new Dictionary<string, Frame>();
-        private Stack<Frame> runtime = new Stack<Frame>();
+        private Dictionary<String, Function> program = new Dictionary<string, Function>();
+        private Stack<Function> runtime = new Stack<Function>();
         private Dictionary<string, Variable> memory = new Dictionary<string, Variable>();
         private List<int> breakPointLines = new List<int>();
         private int? lastBreakLine;
@@ -297,7 +301,7 @@ namespace ConsoleApp1
 
         public Interpretator()
         {
-            program.Add(MAIN, new Frame(MAIN, new LinkedList<IOperation>(), 0));
+            program.Add(MAIN, new Function(MAIN, new LinkedList<IOperation>(), 0));
         }
 
         public void ExecuteLine(string text)
@@ -329,8 +333,8 @@ namespace ConsoleApp1
                 }
                 case "step":
                 {
-                    var frame = runtime.Peek();
-                    frame.ExecuteFrameLine(memory);
+                    var function = runtime.Peek();
+                    function.ExecuteFunctionLine(memory);
                     break;
                 }
                 case "step over":
@@ -348,15 +352,15 @@ namespace ConsoleApp1
 
         private void StepOver()
         {
-            var frame = runtime.Peek();
-            if (!frame.ExecuteFrameLine(memory)) return;
+            var function = runtime.Peek();
+            if (!function.ExecuteFunctionLine(memory)) return;
 
-            var newFrame = runtime.Peek();
+            var newFunction = runtime.Peek();
             var previousCount = runtime.Count - 1;
             while (runtime.Count != previousCount)
             {
-                newFrame = runtime.Peek();
-                var result = RunFrame(newFrame, false);
+                newFunction = runtime.Peek();
+                var result = RunFunction(newFunction, false);
                 switch (result)
                 {
                     case OVER:
@@ -370,7 +374,7 @@ namespace ConsoleApp1
         {
             var lines = text.Split("\n");
             var currentLine = 0;
-            var currentFrame = MAIN;
+            var currentFunction = MAIN;
             var funkStack = new Stack<String>();
             foreach (var line in lines)
             {
@@ -378,7 +382,7 @@ namespace ConsoleApp1
                 var operatorName = trimmed.Substring(0, trimmed.IndexOf(" ", StringComparison.Ordinal));
                 if (!line.StartsWith("    ") && funkStack.Count > 0)
                 {
-                    currentFrame = funkStack.Pop();
+                    currentFunction = funkStack.Pop();
                 }
 
                 var cutted = CutString(trimmed);
@@ -386,34 +390,34 @@ namespace ConsoleApp1
                 switch (operatorName)
                 {
                     case "def":
-                        funkStack.Push(currentFrame);
-                        currentFrame = cutted;
+                        funkStack.Push(currentFunction);
+                        currentFunction = cutted;
 
-                        program.Add(cutted, new Frame(cutted, new LinkedList<IOperation>(), currentLine));
+                        program.Add(cutted, new Function(cutted, new LinkedList<IOperation>(), currentLine));
                         break;
                     case "set":
                     {
-                        program[currentFrame].Operations.AddLast(new SetOperator(cutted, currentLine));
+                        program[currentFunction].Operations.AddLast(new SetOperator(cutted, currentLine));
                         break;
                     }
                     case "sub":
                     {
-                        program[currentFrame].Operations.AddLast(new SubOperator(cutted, currentLine));
+                        program[currentFunction].Operations.AddLast(new SubOperator(cutted, currentLine));
                         break;
                     }
                     case "rem":
                     {
-                        program[currentFrame].Operations.AddLast(new RemOperator(cutted, currentLine));
+                        program[currentFunction].Operations.AddLast(new RemOperator(cutted, currentLine));
                         break;
                     }
                     case "print":
                     {
-                        program[currentFrame].Operations.AddLast(new PrintOperator(cutted, currentLine));
+                        program[currentFunction].Operations.AddLast(new PrintOperator(cutted, currentLine));
                         break;
                     }
                     case "call":
                     {
-                        program[currentFrame].Operations
+                        program[currentFunction].Operations
                             .AddLast(new CallOperator(cutted, currentLine, program, runtime));
                         break;
                     }
@@ -454,10 +458,18 @@ namespace ConsoleApp1
                 runtime.Push(queue);
             }
 
+            /**
+             * fun1
+             * fun2
+             *
+             * fun0
+             * fun1
+             * fun2
+             */
             while (runtime.Count > 0)
             {
-                var frame = runtime.Peek();
-                var result = RunFrame(frame, false);
+                var function = runtime.Peek();
+                var result = RunFunction(function, false);
                 switch (result)
                 {
                     case OVER:
@@ -469,19 +481,19 @@ namespace ConsoleApp1
             }
         }
 
-        private int RunFrame(Frame frame, bool isIgnoreBreak)
+        private int RunFunction(Function function, bool isIgnoreBreak)
         {
-            while (!frame.IsOver())
+            while (!function.IsOver())
             {
-                if (breakPointLines.Contains(frame.CurrentLine) && !isIgnoreBreak &&
-                    frame.CurrentLine != lastBreakLine)
+                if (breakPointLines.Contains(function.CurrentLine) && !isIgnoreBreak &&
+                    function.CurrentLine != lastBreakLine)
                 {
-                    lastBreakLine = frame.CurrentLine;
+                    lastBreakLine = function.CurrentLine;
                     return INTERRUPT;
                 }
 
                 lastBreakLine = null;
-                if (frame.ExecuteFrameLine(memory))
+                if (function.ExecuteFunctionLine(memory))
                 {
                     return NEW_CALL;
                 }
@@ -564,15 +576,15 @@ namespace ConsoleApp1
     class CallOperator : IOperation
     {
         private string name;
-        private Dictionary<String, Frame> program;
-        private Stack<Frame> runtime;
+        private Dictionary<String, Function> program;
+        private Stack<Function> runtime;
         public override int ParsedLine { get; }
 
         public CallOperator(
             string init,
             int parsedLine,
-            Dictionary<String, Frame> program,
-            Stack<Frame> _runtime
+            Dictionary<String, Function> program,
+            Stack<Function> _runtime
         )
         {
             this.name = init;
@@ -583,9 +595,9 @@ namespace ConsoleApp1
 
         public override void Call(Dictionary<string, Variable> memory)
         {
-            var frame = program[name];
-            frame.Reset();
-            runtime.Push(new Frame(name, frame.Operations, ParsedLine));
+            var function = program[name];
+            function.Reset();
+            runtime.Push(new Function(name, function.Operations, ParsedLine));
         }
     }
 
