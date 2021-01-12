@@ -3,32 +3,227 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using NUnit.Framework;
 
 namespace ConsoleApp1
 {
+    [TestFixture]
     class Program
     {
-        static void Main(string[] args)
+
+        [Test]
+        public void ShouldSubVariable()
         {
             var _interpreter = new Interpretator();
+            _interpreter.ExecuteLine("set code");
+            _interpreter.ExecuteLine("set a 5\n" +
+                                     "sub a 2\n" +
+                                     "print a");
+            _interpreter.ExecuteLine("end set code");
+            _interpreter.ExecuteLine("run");
+        }
+        
+        [Test]
+        public void ShouldCallFunctionAndPrint()
+        {
+            var _interpreter = new Interpretator();
+            var _writer = new StringWriter();
+            Console.SetOut(_writer);
+            _interpreter.ExecuteLine("set code");
+            _interpreter.ExecuteLine("def test\n" +
+                                     "    print a\n" +
+                                     "set a 5\n" +
+                                     "call test");
+            _interpreter.ExecuteLine("end set code");
+            _interpreter.ExecuteLine("run");
+            var output = _writer.ToString();
+            var a = int.Parse(output);
+            Assert.That(a, Is.EqualTo(5));
+        }
 
-            _interpreter.Interpretate("set code");
-            _interpreter.Interpretate("def test\n" +
-                                      "    set a 4\n" +
-                                      "set t 5\n" +
-                                      "call test\n" +
-                                      "sub a 3\n" +
-                                      "call test\n" +
-                                      "print a");
-            _interpreter.Interpretate("end set code");
-            _interpreter.Interpretate("add break 1");
-            _interpreter.Interpretate("run");
-            _interpreter.Interpretate("print trace");
-            _interpreter.Interpretate("run");
-            _interpreter.Interpretate("run");
+        [Test]
+        public void ShouldCallFunctionSubAndPrint()
+        {
+            var _interpreter = new Interpretator();
+            var _writer = new StringWriter();
+            Console.SetOut(_writer);
+            _interpreter.ExecuteLine("set code");
+            _interpreter.ExecuteLine("def test\n" +
+                                     "    sub a 3\n" +
+                                     "    print a\n" +
+                                     "set a 5\n" +
+                                     "call test");
+            _interpreter.ExecuteLine("end set code");
+            _interpreter.ExecuteLine("run");
+            
+            var output = _writer.ToString();
+            var a = int.Parse(output);
+
+            Assert.That(a, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void ShouldCallFunctionAndPrintGlobalVarAfter()
+        {
+            var _interpreter = new Interpretator();
+            var _writer = new StringWriter();
+            Console.SetOut(_writer);
+
+            _interpreter.ExecuteLine("set code");
+            _interpreter.ExecuteLine("def test\n" +
+                                     "    set a 4\n" +
+                                     "    sub a 3\n" +
+                                     "call test\n" +
+                                     "print a");
+            _interpreter.ExecuteLine("end set code");
+            _interpreter.ExecuteLine("run");
+
+            var output = _writer.ToString();
+            var a = int.Parse(output);
+
+            Assert.That(a, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ShouldCallFunctionTwice()
+        {
+            var _interpreter = new Interpretator();
+            var _writer = new StringWriter();
+            Console.SetOut(_writer);
+
+            _interpreter.ExecuteLine("set code");
+            _interpreter.ExecuteLine("def test\n" +
+                                     "    sub a 3\n" +
+                                     "set a 12\n" +
+                                     "call test\n" +
+                                     "sub a 3\n" +
+                                     "call test\n" +
+                                     "print a");
+            _interpreter.ExecuteLine("end set code");
+            _interpreter.ExecuteLine("run");
+
+            var output = _writer.ToString();
+            var a = int.Parse(output);
+
+            Assert.That(a, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void ShouldShowMemoryVars()
+        {
+            var _interpreter = new Interpretator();
+            var _writer = new StringWriter();
+            Console.SetOut(_writer);
+
+            _interpreter.ExecuteLine("set code");
+            _interpreter.ExecuteLine("set a 5\n" +
+                                     "set b 4\n" +
+                                     "set c 3\n" +
+                                     "set d 2\n" +
+                                     "set e 1");
+            _interpreter.ExecuteLine("end set code");
+            _interpreter.ExecuteLine("add break 2");
+            _interpreter.ExecuteLine("run");
+            _interpreter.ExecuteLine("print mem");
+
+            var output = _writer.ToString();
+            Assert.That(output.Contains("a 5 0") && output.Contains("b 4 1"), Is.EqualTo(true));
+        }
+
+        [Test]
+        public void ShouldShowTrace()
+        {
+            var _interpreter = new Interpretator();
+            var _writer = new StringWriter();
+            Console.SetOut(_writer);
+
+            _interpreter.ExecuteLine("set code");
+            _interpreter.ExecuteLine("def test\n" +
+                                     "    set a 4\n" +
+                                     "set t 5\n" +
+                                     "call test\n" +
+                                     "sub a 3\n" +
+                                     "call test\n" +
+                                     "print a");
+            _interpreter.ExecuteLine("end set code");
+            _interpreter.ExecuteLine("add break 1");
+            _interpreter.ExecuteLine("run");
+            _interpreter.ExecuteLine("print trace");
+            _interpreter.ExecuteLine("run");
+            _interpreter.ExecuteLine("run");
+
+            var output = _writer.ToString();
+            Assert.That(output.Contains("3 test") && output.Contains("4"),
+                Is.EqualTo(true));
+        }
+        
+           [Test]
+        public void ShouldOverrideVariable()
+        {
+            var _interpreter = new Interpretator();
+            var _writer = new StringWriter();
+            Console.SetOut(_writer);
+
+            _interpreter.ExecuteLine("set code");
+            _interpreter.ExecuteLine("set a 5\n" +
+                                     "set a 6\n" +
+                                     "print a");
+            _interpreter.ExecuteLine("end set code");
+            _interpreter.ExecuteLine("run");
+
+            var output = Int32.Parse(_writer.ToString());
+            Assert.That(output, Is.EqualTo(6));
+        }
+
+        [Test]
+        public void ShouldPostFuncDefinitionWorks()
+        {
+            var _interpreter = new Interpretator();
+            var _writer = new StringWriter();
+            Console.SetOut(_writer);
+
+            _interpreter.ExecuteLine("set code");
+            _interpreter.ExecuteLine("call test\n" +
+                                     "print a\n" +
+                                     "def test\n" +
+                                     "    set a 5");
+            _interpreter.ExecuteLine("end set code");
+            _interpreter.ExecuteLine("run");
+
+            var output = Int32.Parse(_writer.ToString());
+            Assert.That(output, Is.EqualTo(5));
+        }
+
+        [Test]
+        public void ShouldStepOverWork()
+        {
+            var _interpreter = new Interpretator();
+            var _writer = new StringWriter();
+            Console.SetOut(_writer);
+
+            _interpreter.ExecuteLine("set code");
+            _interpreter.ExecuteLine("def test\n" +
+                                     "    set a 4\n" +
+                                     "    set b 5\n" +
+                                     "set t 5\n" +
+                                     "call test\n" +
+                                     "print a");
+            _interpreter.ExecuteLine("end set code");
+            _interpreter.ExecuteLine("add break 1");
+            _interpreter.ExecuteLine("add break 4");
+            _interpreter.ExecuteLine("run");
+            _interpreter.ExecuteLine("step over");
+            _interpreter.ExecuteLine("step");
+
+            var output = Int32.Parse(_writer.ToString());
+            Assert.That(output, Is.EqualTo(4));
+        }
+        
+        static void Main(string[] args)
+        {
         }
     }
 
@@ -105,7 +300,7 @@ namespace ConsoleApp1
             program.Add(MAIN, new Frame(MAIN, new LinkedList<IOperation>(), 0));
         }
 
-        public void Interpretate(string text)
+        public void ExecuteLine(string text)
         {
             switch (text)
             {
