@@ -248,11 +248,11 @@ namespace ConsoleApp1
 
         public LinkedList<IOperation> Operations { get; }
 
-        public LinkedListNode<IOperation> CurrentRuntimeOperator { get; set; }
+        public LinkedListNode<IOperation> CurrentOperator { get; set; }
 
         public int CurrentLine
         {
-            get => CurrentRuntimeOperator.Value.ParsedLine;
+            get => CurrentOperator.Value.ParsedLine;
         }
 
         public Function(string name, LinkedList<IOperation> operations, int calledLine)
@@ -260,7 +260,7 @@ namespace ConsoleApp1
             Name = name;
             Operations = operations;
             CalledLine = calledLine;
-            CurrentRuntimeOperator = operations.First;
+            CurrentOperator = operations.First;
         }
 
         /**
@@ -269,27 +269,27 @@ namespace ConsoleApp1
          */
         public bool ExecuteFunctionLine(Dictionary<string, Variable> memory)
         {
-            var op = CurrentRuntimeOperator.Value;
+            var op = CurrentOperator.Value;
             op.Call(memory);
-            CurrentRuntimeOperator = CurrentRuntimeOperator.Next;
+            CurrentOperator = CurrentOperator.Next;
             return op is CallOperator;
         }
         
         public bool IsOver()
         {
-            return CurrentRuntimeOperator == null;
+            return CurrentOperator == null;
         }
 
         public void Reset()
         {
-            CurrentRuntimeOperator = Operations.First;
+            CurrentOperator = Operations.First;
         }
     }
 
     class Interpretator
     {
         private Dictionary<String, Function> program = new Dictionary<string, Function>();
-        private Stack<Function> runtime = new Stack<Function>();
+        private Stack<Function> callStack = new Stack<Function>();
         private Dictionary<string, Variable> memory = new Dictionary<string, Variable>();
         private List<int> breakPointLines = new List<int>();
         private int? lastBreakLine;
@@ -333,7 +333,7 @@ namespace ConsoleApp1
                 }
                 case "step":
                 {
-                    var function = runtime.Peek();
+                    var function = callStack.Peek();
                     function.ExecuteFunctionLine(memory);
                     break;
                 }
@@ -350,21 +350,29 @@ namespace ConsoleApp1
             }
         }
 
+        /**
+         * fun1
+         * fun2
+         *
+         * fun0
+         * fun1
+         * fun2
+         */
         private void StepOver()
         {
-            var function = runtime.Peek();
+            var function = callStack.Peek();
             if (!function.ExecuteFunctionLine(memory)) return;
 
-            var newFunction = runtime.Peek();
-            var previousCount = runtime.Count - 1;
-            while (runtime.Count != previousCount)
+            var newFunction = callStack.Peek();
+            var previousCount = callStack.Count - 1;
+            while (callStack.Count != previousCount)
             {
-                newFunction = runtime.Peek();
-                var result = RunFunction(newFunction, false);
+                newFunction = callStack.Peek();
+                var result = RunFunction(newFunction, true);
                 switch (result)
                 {
                     case OVER:
-                        runtime.Pop();
+                        callStack.Pop();
                         break;
                 }
             }
@@ -418,7 +426,7 @@ namespace ConsoleApp1
                     case "call":
                     {
                         program[currentFunction].Operations
-                            .AddLast(new CallOperator(cutted, currentLine, program, runtime));
+                            .AddLast(new CallOperator(cutted, currentLine, program, callStack));
                         break;
                     }
                     case "add":
@@ -443,7 +451,7 @@ namespace ConsoleApp1
 
         private void PrintTrace()
         {
-            foreach (var trace in runtime.Where(trace => trace.Name != MAIN))
+            foreach (var trace in callStack.Where(trace => trace.Name != MAIN))
             {
                 Console.WriteLine(trace.CalledLine + " " + trace.Name);
             }
@@ -451,11 +459,11 @@ namespace ConsoleApp1
 
         private void RunProgram()
         {
-            if (runtime.Count == 0)
+            if (callStack.Count == 0)
             {
                 var queue = program[MAIN];
                 queue.Reset();
-                runtime.Push(queue);
+                callStack.Push(queue);
             }
 
             /**
@@ -466,17 +474,19 @@ namespace ConsoleApp1
              * fun1
              * fun2
              */
-            while (runtime.Count > 0)
+            while (callStack.Count > 0)
             {
-                var function = runtime.Peek();
+                var function = callStack.Peek();
                 var result = RunFunction(function, false);
                 switch (result)
                 {
                     case OVER:
-                        runtime.Pop();
+                        callStack.Pop();
                         break;
                     case INTERRUPT:
                         return;
+                    case NEW_CALL:
+                        continue;
                 }
             }
         }
@@ -577,19 +587,19 @@ namespace ConsoleApp1
     {
         private string name;
         private Dictionary<String, Function> program;
-        private Stack<Function> runtime;
+        private Stack<Function> callStack;
         public override int ParsedLine { get; }
 
         public CallOperator(
             string init,
             int parsedLine,
             Dictionary<String, Function> program,
-            Stack<Function> _runtime
+            Stack<Function> callStack
         )
         {
             this.name = init;
             this.program = program;
-            this.runtime = _runtime;
+            this.callStack = callStack;
             this.ParsedLine = parsedLine;
         }
 
@@ -597,7 +607,7 @@ namespace ConsoleApp1
         {
             var function = program[name];
             function.Reset();
-            runtime.Push(new Function(name, function.Operations, ParsedLine));
+            callStack.Push(new Function(name, function.Operations, ParsedLine));
         }
     }
 
